@@ -1,6 +1,5 @@
-# app/models/incident.py
 from pydantic import BaseModel, Field
-from typing import List, Literal, Optional
+from typing import List, Literal
 
 
 class AlertRequest(BaseModel):
@@ -22,3 +21,4 @@ class IncidentAnalysis(BaseModel):
     confidence: float = Field(ge=0, le=1)
     recommendations: List[Recommendation]
     tools_used: List[str]
+    investigation_steps: List[str]

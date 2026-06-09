@@ -81,6 +81,26 @@ async def execute_tools(
     return results
 
 
+def build_investigation_steps(
+    alert: AlertRequest,
+    tool_results: dict[str, Any],
+) -> list[str]:
+    incident_type = classify_incident(alert)
+
+    steps = [
+        f"Classified incident as {incident_type}",
+        f"Selected investigation tools: {', '.join(tool_results.keys())}",
+    ]
+
+    for tool_name in tool_results.keys():
+        steps.append(f"Executed tool: {tool_name}")
+
+    steps.append("Correlated tool outputs with alert context")
+    steps.append("Generated structured incident diagnosis")
+
+    return steps
+
+
 def synthesize_analysis(
     alert: AlertRequest,
     tool_results: dict[str, Any],
@@ -112,6 +132,10 @@ def synthesize_analysis(
                     ),
                 ],
                 tools_used=list(tool_results.keys()),
+                investigation_steps=build_investigation_steps(
+                    alert=alert,
+                    tool_results=tool_results,
+                ),
             )
 
         if deployment.get("status") == "CrashLoopBackOff":
@@ -127,6 +151,10 @@ def synthesize_analysis(
                     )
                 ],
                 tools_used=list(tool_results.keys()),
+                investigation_steps=build_investigation_steps(
+                    alert=alert,
+                    tool_results=tool_results,
+                ),
             )
 
     if incident_type == "latency":
@@ -154,6 +182,10 @@ def synthesize_analysis(
                     ),
                 ],
                 tools_used=list(tool_results.keys()),
+                investigation_steps=build_investigation_steps(
+                    alert=alert,
+                    tool_results=tool_results,
+                ),
             )
 
     if incident_type == "cpu":
@@ -177,6 +209,10 @@ def synthesize_analysis(
                     ),
                 ],
                 tools_used=list(tool_results.keys()),
+                investigation_steps=build_investigation_steps(
+                    alert=alert,
+                    tool_results=tool_results,
+                ),
             )
 
     if incident_type == "memory":
@@ -200,6 +236,10 @@ def synthesize_analysis(
                     ),
                 ],
                 tools_used=list(tool_results.keys()),
+                investigation_steps=build_investigation_steps(
+                    alert=alert,
+                    tool_results=tool_results,
+                ),
             )
 
     return IncidentAnalysis(
@@ -214,6 +254,10 @@ def synthesize_analysis(
             )
         ],
         tools_used=list(tool_results.keys()),
+        investigation_steps=build_investigation_steps(
+            alert=alert,
+            tool_results=tool_results,
+        ),
     )
 
 
