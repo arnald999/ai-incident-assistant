@@ -27,17 +27,40 @@ def classify_incident(alert: AlertRequest) -> str:
 
 
 def plan_tools(alert: AlertRequest) -> list[str]:
-    alert_text = f"{alert.alert_type} {alert.message}".lower()
+    """
+    Decide which tools to run based on incident type.
+    """
 
-    tools = ["get_deployment_status"]
+    incident_type = classify_incident(alert)
 
-    if "crashloopbackoff" in alert_text or "pod" in alert_text:
-        tools.append("get_pod_logs")
+    investigation_map = {
+        "startup_failure": [
+            "get_pod_logs",
+            "get_deployment_status",
+            "get_recent_incidents",
+        ],
 
-    if "payment" in alert.service_name.lower():
-        tools.append("get_recent_incidents")
+        "latency": [
+            "get_service_metrics",
+            "get_recent_deployments",
+            "get_service_health",
+        ],
 
-    return tools
+        "cpu": [
+            "get_service_metrics",
+            "get_recent_deployments",
+        ],
+
+        "memory": [
+            "get_service_metrics",
+            "get_pod_logs",
+        ],
+    }
+
+    return investigation_map.get(
+        incident_type,
+        ["get_deployment_status"],
+    )
 
 
 async def execute_tools(
