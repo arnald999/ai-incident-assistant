@@ -87,41 +87,120 @@ def synthesize_analysis(
 ) -> IncidentAnalysis:
     logs = str(tool_results.get("get_pod_logs", "")).lower()
     deployment = tool_results.get("get_deployment_status", {})
+    metrics = tool_results.get("get_service_metrics", {})
+    health = tool_results.get("get_service_health", {})
+    recent_deployment = tool_results.get("get_recent_deployments", {})
 
-    if "invalid database credentials" in logs:
-        return IncidentAnalysis(
-            severity="critical",
-            root_cause="Application startup failure caused by invalid database credentials",
-            confidence=0.95,
-            recommendations=[
-                Recommendation(
-                    action="Verify Kubernetes secret configuration",
-                    reason="Pod logs indicate authentication failure during startup",
-                    priority="high",
-                ),
-                Recommendation(
-                    action="Rollback latest deployment if secret configuration changed recently",
-                    reason="Deployment is unhealthy and may be related to a recent rollout",
-                    priority="high",
-                ),
-            ],
-            tools_used=list(tool_results.keys()),
-        )
+    incident_type = classify_incident(alert)
 
-    if deployment.get("status") == "CrashLoopBackOff":
-        return IncidentAnalysis(
-            severity="high",
-            root_cause="Service pods are repeatedly crashing after startup",
-            confidence=0.8,
-            recommendations=[
-                Recommendation(
-                    action="Inspect pod logs and recent deployment changes",
-                    reason="CrashLoopBackOff usually indicates startup failure or runtime crash",
-                    priority="high",
-                )
-            ],
-            tools_used=list(tool_results.keys()),
-        )
+    if incident_type == "startup_failure":
+        if "invalid database credentials" in logs:
+            return IncidentAnalysis(
+                severity="critical",
+                root_cause="Application startup failure caused by invalid database credentials",
+                confidence=0.95,
+                recommendations=[
+                    Recommendation(
+                        action="Verify Kubernetes secret configuration",
+                        reason="Pod logs indicate authentication failure during startup",
+                        priority="high",
+                    ),
+                    Recommendation(
+                        action="Rollback latest deployment if secret configuration changed recently",
+                        reason="Deployment is unhealthy and may be related to a recent rollout",
+                        priority="high",
+                    ),
+                ],
+                tools_used=list(tool_results.keys()),
+            )
+
+        if deployment.get("status") == "CrashLoopBackOff":
+            return IncidentAnalysis(
+                severity="high",
+                root_cause="Service pods are repeatedly crashing after startup",
+                confidence=0.8,
+                recommendations=[
+                    Recommendation(
+                        action="Inspect pod logs and recent deployment changes",
+                        reason="CrashLoopBackOff usually indicates startup failure or runtime crash",
+                        priority="high",
+                    )
+                ],
+                tools_used=list(tool_results.keys()),
+            )
+
+    if incident_type == "latency":
+        p95_latency = metrics.get("p95_latency_ms")
+        error_rate = metrics.get("error_rate")
+        health_status = health.get("status")
+        deployed_minutes_ago = recent_deployment.get("deployed_minutes_ago")
+        version = recent_deployment.get("version")
+
+        if p95_latency and p95_latency >= 1000:
+            return IncidentAnalysis(
+                severity="high",
+                root_cause=f"Latency degradation likely introduced by recent deployment {version}",
+                confidence=0.87,
+                recommendations=[
+                    Recommendation(
+                        action=f"Review or rollback deployment {version}",
+                        reason=f"P95 latency is {p95_latency}ms and deployment occurred {deployed_minutes_ago} minutes ago",
+                        priority="high",
+                    ),
+                    Recommendation(
+                        action="Inspect downstream dependencies and slow queries",
+                        reason=f"Service health is {health_status} and error rate is {error_rate}",
+                        priority="medium",
+                    ),
+                ],
+                tools_used=list(tool_results.keys()),
+            )
+
+    if incident_type == "cpu":
+        cpu = metrics.get("cpu_percent")
+
+        if cpu and cpu >= 80:
+            return IncidentAnalysis(
+                severity="high",
+                root_cause="High CPU utilization is causing service instability",
+                confidence=0.82,
+                recommendations=[
+                    Recommendation(
+                        action="Scale the service horizontally",
+                        reason=f"CPU utilization is {cpu}%",
+                        priority="high",
+                    ),
+                    Recommendation(
+                        action="Profile recent code paths for CPU-heavy operations",
+                        reason="Recent deployment may have introduced inefficient processing",
+                        priority="medium",
+                    ),
+                ],
+                tools_used=list(tool_results.keys()),
+            )
+
+    if incident_type == "memory":
+        memory = metrics.get("memory_percent")
+
+        if memory and memory >= 80:
+            return IncidentAnalysis(
+                severity="high",
+                root_cause="Memory pressure detected on service instances",
+                confidence=0.82,
+                recommendations=[
+                    Recommendation(
+                        action="Inspect memory usage and potential leaks",
+                        reason=f"Memory utilization is {memory}%",
+                        priority="high",
+                    ),
+                    Recommendation(
+                        action="Restart affected pods if memory continues increasing",
+                        reason="Restarting may temporarily stabilize the service while root cause is investigated",
+                        priority="medium",
+                    ),
+                ],
+                tools_used=list(tool_results.keys()),
+            )
 
     return IncidentAnalysis(
         severity="medium",
@@ -129,7 +208,7 @@ def synthesize_analysis(
         confidence=0.55,
         recommendations=[
             Recommendation(
-                action="Collect additional logs, metrics, and Kubernetes events",
+                action="Collect additional logs, metrics, Kubernetes events, and deployment metadata",
                 reason="Current tool results do not provide enough diagnostic evidence",
                 priority="medium",
             )
