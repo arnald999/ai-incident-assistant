@@ -4,6 +4,28 @@ from app.models.incident import AlertRequest, IncidentAnalysis, Recommendation
 from app.tools.registry import TOOL_REGISTRY
 
 
+def classify_incident(alert: AlertRequest) -> str:
+    """
+    Determine the incident category from the alert type and message.
+    """
+
+    text = f"{alert.alert_type} {alert.message}".lower()
+
+    if "crashloopbackoff" in text:
+        return "startup_failure"
+
+    if "latency" in text or "p95" in text or "p99" in text:
+        return "latency"
+
+    if "cpu" in text:
+        return "cpu"
+
+    if "memory" in text or "oom" in text:
+        return "memory"
+
+    return "unknown"
+
+
 def plan_tools(alert: AlertRequest) -> list[str]:
     alert_text = f"{alert.alert_type} {alert.message}".lower()
 
@@ -42,7 +64,6 @@ def synthesize_analysis(
 ) -> IncidentAnalysis:
     logs = str(tool_results.get("get_pod_logs", "")).lower()
     deployment = tool_results.get("get_deployment_status", {})
-    incidents = tool_results.get("get_recent_incidents", [])
 
     if "invalid database credentials" in logs:
         return IncidentAnalysis(
@@ -95,7 +116,11 @@ def synthesize_analysis(
 
 
 async def analyze_incident(alert: AlertRequest) -> IncidentAnalysis:
+    incident_type = classify_incident(alert)
+    print(f"[Agent] Incident Type: {incident_type}")
+
     planned_tools = plan_tools(alert)
+    print(f"[Agent] Planned Tools: {planned_tools}")
 
     tool_results = await execute_tools(
         tool_names=planned_tools,
