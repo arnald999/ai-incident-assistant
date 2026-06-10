@@ -1,15 +1,12 @@
 from typing import Any
 
 from app.models.incident import AlertRequest, IncidentAnalysis, Recommendation
-from app.tools.registry import TOOL_REGISTRY
+from app.services.langfuse_service import langfuse
 from app.services.llm_service import generate_structured_incident_analysis
+from app.tools.registry import TOOL_REGISTRY
 
 
 def classify_incident(alert: AlertRequest) -> str:
-    """
-    Determine the incident category from the alert type and message.
-    """
-
     text = f"{alert.alert_type} {alert.message}".lower()
 
     if "crashloopbackoff" in text:
@@ -28,10 +25,6 @@ def classify_incident(alert: AlertRequest) -> str:
 
 
 def plan_tools(alert: AlertRequest) -> list[str]:
-    """
-    Decide which tools to run based on incident type.
-    """
-
     incident_type = classify_incident(alert)
 
     investigation_map = {
@@ -40,28 +33,22 @@ def plan_tools(alert: AlertRequest) -> list[str]:
             "get_deployment_status",
             "get_recent_incidents",
         ],
-
         "latency": [
             "get_service_metrics",
             "get_recent_deployments",
             "get_service_health",
         ],
-
         "cpu": [
             "get_service_metrics",
             "get_recent_deployments",
         ],
-
         "memory": [
             "get_service_metrics",
             "get_pod_logs",
         ],
     }
 
-    return investigation_map.get(
-        incident_type,
-        ["get_deployment_status"],
-    )
+    return investigation_map.get(incident_type, ["get_deployment_status"])
 
 
 async def execute_tools(
@@ -71,13 +58,27 @@ async def execute_tools(
     results: dict[str, Any] = {}
 
     for tool_name in tool_names:
-        tool = TOOL_REGISTRY.get(tool_name)
+        with langfuse.start_as_current_observation(
+            name=f"tool-{tool_name}",
+            as_type="span",
+            input={"service_name": service_name},
+        ) as span:
+            tool = TOOL_REGISTRY.get(tool_name)
 
-        if not tool:
-            results[tool_name] = {"error": "Tool not found"}
-            continue
+            if not tool:
+                error_result = {"error": "Tool not found"}
+                results[tool_name] = error_result
+                span.update(output=error_result)
+                continue
 
-        results[tool_name] = await tool(service_name)
+            try:
+                result = await tool(service_name)
+                results[tool_name] = result
+                span.update(output=result)
+            except Exception as exc:
+                error_result = {"error": str(exc)}
+                results[tool_name] = error_result
+                span.update(output=error_result)
 
     return results
 
@@ -111,6 +112,7 @@ def synthesize_analysis(
     metrics = tool_results.get("get_service_metrics", {})
     health = tool_results.get("get_service_health", {})
     recent_deployment = tool_results.get("get_recent_deployments", {})
+    investigation_steps = build_investigation_steps(alert, tool_results)
 
     incident_type = classify_incident(alert)
 
@@ -133,10 +135,7 @@ def synthesize_analysis(
                     ),
                 ],
                 tools_used=list(tool_results.keys()),
-                investigation_steps=build_investigation_steps(
-                    alert=alert,
-                    tool_results=tool_results,
-                ),
+                investigation_steps=investigation_steps,
             )
 
         if deployment.get("status") == "CrashLoopBackOff":
@@ -152,10 +151,7 @@ def synthesize_analysis(
                     )
                 ],
                 tools_used=list(tool_results.keys()),
-                investigation_steps=build_investigation_steps(
-                    alert=alert,
-                    tool_results=tool_results,
-                ),
+                investigation_steps=investigation_steps,
             )
 
     if incident_type == "latency":
@@ -173,7 +169,10 @@ def synthesize_analysis(
                 recommendations=[
                     Recommendation(
                         action=f"Review or rollback deployment {version}",
-                        reason=f"P95 latency is {p95_latency}ms and deployment occurred {deployed_minutes_ago} minutes ago",
+                        reason=(
+                            f"P95 latency is {p95_latency}ms and deployment occurred "
+                            f"{deployed_minutes_ago} minutes ago"
+                        ),
                         priority="high",
                     ),
                     Recommendation(
@@ -183,10 +182,7 @@ def synthesize_analysis(
                     ),
                 ],
                 tools_used=list(tool_results.keys()),
-                investigation_steps=build_investigation_steps(
-                    alert=alert,
-                    tool_results=tool_results,
-                ),
+                investigation_steps=investigation_steps,
             )
 
     if incident_type == "cpu":
@@ -210,10 +206,7 @@ def synthesize_analysis(
                     ),
                 ],
                 tools_used=list(tool_results.keys()),
-                investigation_steps=build_investigation_steps(
-                    alert=alert,
-                    tool_results=tool_results,
-                ),
+                investigation_steps=investigation_steps,
             )
 
     if incident_type == "memory":
@@ -232,15 +225,15 @@ def synthesize_analysis(
                     ),
                     Recommendation(
                         action="Restart affected pods if memory continues increasing",
-                        reason="Restarting may temporarily stabilize the service while root cause is investigated",
+                        reason=(
+                            "Restarting may temporarily stabilize the service while "
+                            "root cause is investigated"
+                        ),
                         priority="medium",
                     ),
                 ],
                 tools_used=list(tool_results.keys()),
-                investigation_steps=build_investigation_steps(
-                    alert=alert,
-                    tool_results=tool_results,
-                ),
+                investigation_steps=investigation_steps,
             )
 
     return IncidentAnalysis(
@@ -255,40 +248,103 @@ def synthesize_analysis(
             )
         ],
         tools_used=list(tool_results.keys()),
-        investigation_steps=build_investigation_steps(
-            alert=alert,
-            tool_results=tool_results,
-        ),
+        investigation_steps=investigation_steps,
     )
 
 
 async def analyze_incident(alert: AlertRequest) -> IncidentAnalysis:
-    incident_type = classify_incident(alert)
-    print(f"[Agent] Incident Type: {incident_type}")
+    with langfuse.start_as_current_observation(
+        name="incident-analysis",
+        as_type="span",
+        input=alert.model_dump(),
+    ) as root_span:
+        with langfuse.start_as_current_observation(
+            name="classify-incident",
+            as_type="span",
+            input=alert.model_dump(),
+        ) as span:
+            incident_type = classify_incident(alert)
+            span.update(output={"incident_type": incident_type})
 
-    planned_tools = plan_tools(alert)
-    print(f"[Agent] Planned Tools: {planned_tools}")
+        print(f"[Agent] Incident Type: {incident_type}")
 
-    tool_results = await execute_tools(
-        tool_names=planned_tools,
-        service_name=alert.service_name,
-    )
+        with langfuse.start_as_current_observation(
+            name="plan-tools",
+            as_type="span",
+            input={"incident_type": incident_type},
+        ) as span:
+            planned_tools = plan_tools(alert)
+            span.update(output={"planned_tools": planned_tools})
 
-    investigation_steps = build_investigation_steps(
-        alert=alert,
-        tool_results=tool_results,
-    )
+        print(f"[Agent] Planned Tools: {planned_tools}")
 
-    try:
-        return generate_structured_incident_analysis(
-            alert=alert.model_dump(),
-            tool_results=tool_results,
-            investigation_steps=investigation_steps,
-        )
-    except Exception as exc:
-        print(f"[Agent] LLM analysis failed: {exc}")
+        with langfuse.start_as_current_observation(
+            name="execute-tools",
+            as_type="span",
+            input={
+                "planned_tools": planned_tools,
+                "service_name": alert.service_name,
+            },
+        ) as span:
+            tool_results = await execute_tools(
+                tool_names=planned_tools,
+                service_name=alert.service_name,
+            )
+            span.update(output=tool_results)
 
-        return synthesize_analysis(
-            alert=alert,
-            tool_results=tool_results,
-        )
+        with langfuse.start_as_current_observation(
+            name="build-investigation-steps",
+            as_type="span",
+            input={"tool_names": list(tool_results.keys())},
+        ) as span:
+            investigation_steps = build_investigation_steps(
+                alert=alert,
+                tool_results=tool_results,
+            )
+            span.update(output={"steps": investigation_steps})
+
+        try:
+            with langfuse.start_as_current_observation(
+                name="generate-llm-analysis",
+                as_type="span",
+                input={
+                    "alert": alert.model_dump(),
+                    "tool_results": tool_results,
+                    "investigation_steps": investigation_steps,
+                },
+            ) as span:
+                analysis = generate_structured_incident_analysis(
+                    alert=alert.model_dump(),
+                    tool_results=tool_results,
+                    investigation_steps=investigation_steps,
+                )
+                span.update(output=analysis.model_dump())
+
+            root_span.update(
+                output={
+                    "analysis_source": "llm",
+                    "analysis": analysis.model_dump(),
+                }
+            )
+
+            langfuse.flush()
+            return analysis
+
+        except Exception as exc:
+            print(f"[Agent] LLM analysis failed: {exc}")
+
+            fallback_analysis = synthesize_analysis(
+                alert=alert,
+                tool_results=tool_results,
+            )
+
+            root_span.update(
+                output={
+                    "analysis_source": "fallback",
+                    "error": str(exc),
+                    "analysis": fallback_analysis.model_dump(),
+                }
+            )
+
+            langfuse.flush()
+            return fallback_analysis
