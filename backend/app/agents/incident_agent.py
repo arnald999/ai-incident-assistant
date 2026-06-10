@@ -2,6 +2,7 @@ from typing import Any
 
 from app.models.incident import AlertRequest, IncidentAnalysis, Recommendation
 from app.tools.registry import TOOL_REGISTRY
+from app.services.llm_service import generate_structured_incident_analysis
 
 
 def classify_incident(alert: AlertRequest) -> str:
@@ -273,7 +274,13 @@ async def analyze_incident(alert: AlertRequest) -> IncidentAnalysis:
         service_name=alert.service_name,
     )
 
-    return synthesize_analysis(
+    investigation_steps = build_investigation_steps(
         alert=alert,
         tool_results=tool_results,
+    )
+
+    return generate_structured_incident_analysis(
+        alert=alert.model_dump(),
+        tool_results=tool_results,
+        investigation_steps=investigation_steps,
     )
