@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Alert, Box, Container, Typography } from "@mui/material";
+import { Alert, Box, Container, Paper, Typography } from "@mui/material";
 import AlertForm, { type AlertPayload } from "../components/AlertForm";
 import IncidentResult from "../components/IncidentResult";
 import { analyzeIncident } from "../api/incidentApi";
@@ -27,25 +27,36 @@ export default function Dashboard() {
   };
 
   return (
-    <Container maxWidth="md">
-      <Box py={4}>
-        <Typography variant="h4" fontWeight={700} gutterBottom>
-          AI Incident Assistant
-        </Typography>
+    <Box sx={{ minHeight: "100vh", bgcolor: "#f6f8fb" }}>
+      <Container maxWidth="lg">
+        <Box sx={{ py: 5 }}>
+          <Box sx={{ textAlign: "center", mb: 4 }}>
+            <Typography variant="h3" fontWeight={800} gutterBottom>
+              AI Incident Assistant
+            </Typography>
 
-        <Typography variant="body1" color="text.secondary" mb={3}>
-          Submit a production alert and let the AI agent classify the incident,
-          execute investigation tools, and generate a structured diagnosis.
-        </Typography>
+            <Typography variant="body1" color="text.secondary">
+              Agent-powered incident investigation for SRE and platform teams.
+            </Typography>
+          </Box>
 
-        <Box display="flex" flexDirection="column" gap={3}>
-          <AlertForm onSubmit={handleAnalyze} loading={loading} />
+          <Paper elevation={0} sx={{ p: 3, borderRadius: 3 }}>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              <AlertForm onSubmit={handleAnalyze} loading={loading} />
 
-          {error && <Alert severity="error">{error}</Alert>}
+              {error && <Alert severity="error">{error}</Alert>}
 
-          {result && <IncidentResult result={result} />}
+              {result && <IncidentResult result={result} />}
+            </Box>
+          </Paper>
+
+          <Box sx={{ textAlign: "center", mt: 4 }}>
+            <Typography variant="caption" color="text.secondary">
+              FastAPI • OpenRouter • Langfuse • React • Docker
+            </Typography>
+          </Box>
         </Box>
-      </Box>
-    </Container>
+      </Container>
+    </Box>
   );
 }

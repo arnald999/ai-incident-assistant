@@ -17,16 +17,16 @@ export default function InvestigationTimeline({
   steps,
 }: InvestigationTimelineProps) {
   return (
-    <Card>
-      <CardContent>
-        <Typography variant="h6" gutterBottom>
+    <Card sx={{ borderRadius: 3, height: "100%" }}>
+      <CardContent sx={{ p: 3 }}>
+        <Typography variant="h5" align="center" fontWeight={700} gutterBottom>
           Investigation Timeline
         </Typography>
 
         <List>
           {steps.map((step, index) => (
-            <ListItem key={`${step}-${index}`}>
-              <ListItemIcon>
+            <ListItem key={`${step}-${index}`} alignItems="flex-start">
+              <ListItemIcon sx={{ minWidth: 36 }}>
                 <CheckCircleIcon color="success" />
               </ListItemIcon>
               <ListItemText primary={step} />

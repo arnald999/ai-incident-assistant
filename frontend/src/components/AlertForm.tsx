@@ -4,6 +4,7 @@ import {
   Button,
   Card,
   CardContent,
+  CircularProgress,
   MenuItem,
   TextField,
   Typography,
@@ -21,6 +22,12 @@ interface AlertFormProps {
   loading: boolean;
 }
 
+const labelProps = {
+  inputLabel: {
+    shrink: true,
+  },
+};
+
 export default function AlertForm({ onSubmit, loading }: AlertFormProps) {
   const [payload, setPayload] = useState<AlertPayload>({
     service_name: "search-service",
@@ -37,16 +44,17 @@ export default function AlertForm({ onSubmit, loading }: AlertFormProps) {
   };
 
   return (
-    <Card>
-      <CardContent>
-        <Typography variant="h6" gutterBottom>
+    <Card sx={{ borderRadius: 3 }}>
+      <CardContent sx={{ p: 3 }}>
+        <Typography variant="h5" align="center" fontWeight={700} gutterBottom>
           Submit Incident Alert
         </Typography>
 
-        <Box display="flex" flexDirection="column" gap={2}>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5, mt: 3 }}>
           <TextField
             label="Service Name"
             value={payload.service_name}
+            slotProps={labelProps}
             onChange={(e) => handleChange("service_name", e.target.value)}
             fullWidth
           />
@@ -55,6 +63,7 @@ export default function AlertForm({ onSubmit, loading }: AlertFormProps) {
             select
             label="Alert Type"
             value={payload.alert_type}
+            slotProps={labelProps}
             onChange={(e) => handleChange("alert_type", e.target.value)}
             fullWidth
           >
@@ -67,16 +76,18 @@ export default function AlertForm({ onSubmit, loading }: AlertFormProps) {
           <TextField
             label="Message"
             value={payload.message}
+            slotProps={labelProps}
             onChange={(e) => handleChange("message", e.target.value)}
             fullWidth
             multiline
-            rows={3}
+            rows={4}
           />
 
           <TextField
             select
             label="Environment"
             value={payload.environment}
+            slotProps={labelProps}
             onChange={(e) => handleChange("environment", e.target.value)}
             fullWidth
           >
@@ -85,14 +96,20 @@ export default function AlertForm({ onSubmit, loading }: AlertFormProps) {
             <MenuItem value="development">Development</MenuItem>
           </TextField>
 
-          <Button
-            variant="contained"
-            size="large"
-            onClick={() => onSubmit(payload)}
-            disabled={loading}
-          >
-            {loading ? "Analyzing..." : "Analyze Incident"}
-          </Button>
+          <Box sx={{ display: "flex", justifyContent: "center" }}>
+            <Button
+              variant="contained"
+              size="large"
+              onClick={() => onSubmit(payload)}
+              disabled={loading}
+              startIcon={
+                loading ? <CircularProgress size={18} color="inherit" /> : null
+              }
+              sx={{ px: 4, py: 1.2, fontWeight: 700 }}
+            >
+              {loading ? "Analyzing..." : "Analyze Incident"}
+            </Button>
+          </Box>
         </Box>
       </CardContent>
     </Card>
