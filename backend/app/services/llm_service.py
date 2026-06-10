@@ -1,8 +1,11 @@
-import os
 import json
+import os
 
 from dotenv import load_dotenv
 from openai import OpenAI
+
+from app.models.incident import IncidentAnalysis
+from app.services.prompts import build_incident_prompt
 
 load_dotenv()
 
@@ -11,30 +14,18 @@ client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
 )
 
-MODEL = os.getenv("MODEL", "qwen/qwen3-30b-a3b:free")
+MODEL = os.getenv("MODEL", "openrouter/free")
 
 
-def test_openrouter_connection() -> str:
-    response = client.chat.completions.create(
-        model=MODEL,
-        messages=[
-            {"role": "user", "content": "Reply with only: OpenRouter connected"}
-        ],
-    )
-
-    return response.choices[0].message.content
-
-def generate_incident_analysis(
+def generate_structured_incident_analysis(
     alert: dict,
     tool_results: dict,
     investigation_steps: list[str],
-):
-    from app.services.prompts import build_incident_prompt
-
+) -> IncidentAnalysis:
     prompt = build_incident_prompt(
-        alert,
-        tool_results,
-        investigation_steps,
+        alert=alert,
+        tool_results=tool_results,
+        investigation_steps=investigation_steps,
     )
 
     response = client.chat.completions.create(
@@ -42,13 +33,21 @@ def generate_incident_analysis(
         messages=[
             {
                 "role": "system",
-                "content": "You are an expert SRE incident investigator.",
+                "content": (
+                    "You are an expert SRE incident investigator. "
+                    "You must return only valid JSON matching the requested schema."
+                ),
             },
             {
                 "role": "user",
                 "content": prompt,
             },
         ],
+        temperature=0,
     )
 
-    return response.choices[0].message.content
+    content = response.choices[0].message.content
+
+    data = json.loads(content)
+
+    return IncidentAnalysis.model_validate(data)
