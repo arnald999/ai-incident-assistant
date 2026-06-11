@@ -19,7 +19,7 @@ export default function InvestigationTimeline({
   return (
     <Card sx={{ borderRadius: 3, height: "100%" }}>
       <CardContent sx={{ p: 3 }}>
-        <Typography variant="h5" align="center" fontWeight={700} gutterBottom>
+        <Typography variant="h5" align="center" sx={{ fontWeight: 700 }} gutterBottom>
           Investigation Timeline
         </Typography>
 

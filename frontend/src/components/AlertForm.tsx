@@ -46,7 +46,7 @@ export default function AlertForm({ onSubmit, loading }: AlertFormProps) {
   return (
     <Card sx={{ borderRadius: 3 }}>
       <CardContent sx={{ p: 3 }}>
-        <Typography variant="h5" align="center" fontWeight={700} gutterBottom>
+        <Typography variant="h5" align="center" sx={{ fontWeight: 700 }} gutterBottom>
           Submit Incident Alert
         </Typography>
 

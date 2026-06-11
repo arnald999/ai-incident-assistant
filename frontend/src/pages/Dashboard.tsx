@@ -31,7 +31,7 @@ export default function Dashboard() {
       <Container maxWidth="lg">
         <Box sx={{ py: 5 }}>
           <Box sx={{ textAlign: "center", mb: 4 }}>
-            <Typography variant="h3" fontWeight={800} gutterBottom>
+            <Typography variant="h3" sx={{ fontWeight: 800 }} gutterBottom>
               AI Incident Assistant
             </Typography>
 

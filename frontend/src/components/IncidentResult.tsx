@@ -28,7 +28,7 @@ export default function IncidentResult({ result }: IncidentResultProps) {
     <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
       <Card sx={{ borderRadius: 3 }}>
         <CardContent sx={{ p: 3, textAlign: "center" }}>
-          <Typography variant="h5" fontWeight={700} gutterBottom>
+          <Typography variant="h5" sx={{ fontWeight: 700 }} gutterBottom>
             Incident Summary
           </Typography>
 
@@ -67,7 +67,7 @@ export default function IncidentResult({ result }: IncidentResultProps) {
       >
         <Card sx={{ borderRadius: 3, height: "100%" }}>
           <CardContent sx={{ p: 3, textAlign: "center" }}>
-            <Typography variant="h5" fontWeight={700} gutterBottom>
+            <Typography variant="h5" sx={{ fontWeight: 700 }} gutterBottom>
               Tools Used
             </Typography>
 
@@ -92,7 +92,7 @@ export default function IncidentResult({ result }: IncidentResultProps) {
 
       <Card sx={{ borderRadius: 3 }}>
         <CardContent sx={{ p: 3 }}>
-          <Typography variant="h5" align="center" fontWeight={700} gutterBottom>
+          <Typography variant="h5" align="center" sx={{ fontWeight: 700 }} gutterBottom>
             Recommendations
           </Typography>
 
@@ -110,7 +110,7 @@ export default function IncidentResult({ result }: IncidentResultProps) {
                           flexWrap: "wrap",
                         }}
                       >
-                        <Typography fontWeight={700}>
+                        <Typography sx={{ fontWeight: 700 }}>
                           {recommendation.action}
                         </Typography>
                         <Chip
