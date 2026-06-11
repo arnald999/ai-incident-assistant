@@ -4,14 +4,28 @@ AI Incident Assistant is an agent-powered platform that helps Site Reliability E
 
 Instead of manually checking logs, deployments, metrics, and historical incidents, engineers can submit an alert and receive an AI-generated diagnosis with actionable recommendations.
 
-This project demonstrates production AI engineering patterns including:
+This project demonstrates modern AI engineering patterns including:
 
-* Agent workflows
-* Tool orchestration
-* Structured outputs
-* Context engineering
-* LLM integration
-* Production-grade API design
+* Agent Workflows
+* Tool Orchestration
+* Structured Outputs
+* Context Engineering
+* LLM Integration
+* AI Observability
+* Evaluation Frameworks
+* CI/CD Quality Gates
+
+---
+
+# Live Demo
+
+### Frontend
+
+https://ai-incident-assistant-seven.vercel.app/
+
+### Backend API
+
+https://ai-incident-assistant-pxzl.onrender.com/docs
 
 ---
 
@@ -20,11 +34,11 @@ This project demonstrates production AI engineering patterns including:
 Modern cloud environments generate thousands of alerts every day:
 
 * CrashLoopBackOff
-* High CPU usage
-* Memory pressure
-* Service degradation
-* Deployment failures
-* Increased latency
+* High CPU Usage
+* Memory Pressure
+* Service Degradation
+* Deployment Failures
+* Increased Latency
 
 Engineers often spend more time gathering context than actually solving incidents.
 
@@ -35,6 +49,7 @@ AI Incident Assistant automates the investigation process by:
 3. Executing tools
 4. Collecting evidence
 5. Generating structured diagnoses
+6. Producing actionable recommendations
 
 ---
 
@@ -63,13 +78,34 @@ Tool Execution
 Investigation Trace
   │
   ▼
-LLM Structured Analysis
+OpenRouter LLM
+  │
+  ▼
+Structured Analysis
   │
   ▼
 Pydantic Validation
   │
   ▼
 Incident Response
+```
+
+---
+
+# Deployment Architecture
+
+```text
+Frontend (Vercel)
+        │
+        ▼
+FastAPI Backend (Render)
+        │
+        ▼
+Agent Workflow
+        │
+        ├── Tool Execution
+        ├── OpenRouter
+        └── Langfuse
 ```
 
 ---
@@ -128,7 +164,7 @@ get_pod_logs
 
 The agent executes tools to gather context.
 
-Current mock tools:
+Current tools:
 
 ```text
 get_pod_logs()
@@ -190,23 +226,133 @@ Example:
 
 ---
 
-## LLM Integration
+# React Dashboard
 
-The project uses OpenRouter for model access.
+The frontend dashboard provides:
 
-Benefits:
+* Incident Submission Form
+* Severity Visualization
+* Root Cause Analysis
+* Investigation Timeline
+* Recommendations Panel
+* Tool Execution Visibility
 
-* Model agnostic
-* Easy experimentation
-* Cost-effective development
-* Supports multiple providers
+Built using:
 
-Examples:
+* React
+* TypeScript
+* Material UI
+* Axios
 
-* Qwen
-* DeepSeek
-* Gemini
-* OpenAI-compatible models
+---
+
+# AI Observability
+
+The platform uses Langfuse for workflow tracing and observability.
+
+Tracked events include:
+
+* Alert Classification
+* Tool Planning
+* Tool Execution
+* Prompt Generation
+* OpenRouter Requests
+* Structured Output Generation
+
+This provides visibility into AI decision-making and workflow execution.
+
+---
+
+# Evaluation Framework
+
+The project includes an automated evaluation harness for measuring AI quality.
+
+Features:
+
+* Golden Dataset Testing
+* Severity Validation
+* Tool Selection Validation
+* Root Cause Validation
+* Response Latency Measurement
+* Evaluation Reports
+* GitHub Actions Automation
+
+Run evaluations:
+
+```bash
+python -m evaluations.evaluator
+```
+
+Sample Output:
+
+```text
+=== Evaluation Report ===
+
+[PASS] latency_regression_after_deployment
+[PASS] payment_service_startup_failure
+[PASS] cpu_spike
+[PASS] memory_pressure
+
+Accuracy: 4/4 (100%)
+```
+
+---
+
+# CI/CD
+
+GitHub Actions automatically evaluates the AI system on every push and pull request.
+
+Pipeline:
+
+```text
+Push
+ ↓
+Install Dependencies
+ ↓
+Run Evaluation Harness
+ ↓
+Generate Report
+ ↓
+Upload Artifact
+ ↓
+Pass / Fail Quality Gate
+```
+
+This helps prevent prompt regressions and AI quality degradation.
+
+---
+
+# Tool Execution Modes
+
+The platform supports configurable tool execution modes.
+
+## Mock Mode
+
+Used for:
+
+* Local Development
+* Public Demos
+* Evaluation Testing
+
+Tools return deterministic mock telemetry.
+
+## Real Mode
+
+Designed for future integrations:
+
+* Kubernetes API
+* Prometheus
+* Grafana
+* Deployment Platforms
+
+Configuration:
+
+```env
+TOOL_MODE=mock
+
+ENABLE_REAL_K8S=false
+ENABLE_REAL_PROMETHEUS=false
+```
 
 ---
 
@@ -223,10 +369,27 @@ Examples:
 * OpenRouter
 * OpenAI SDK
 
+## Observability
+
+* Langfuse
+
+## Frontend
+
+* React
+* TypeScript
+* Material UI
+* Axios
+
 ## Infrastructure
 
 * Docker
 * Docker Compose
+* Render
+* Vercel
+
+## CI/CD
+
+* GitHub Actions
 
 ---
 
@@ -248,6 +411,7 @@ backend/
 │
 ├── services/
 │   ├── llm_service.py
+│   ├── langfuse_service.py
 │   └── prompts.py
 │
 ├── tools/
@@ -259,6 +423,12 @@ backend/
 │   ├── registry.py
 │   └── releases.py
 │
+├── evaluations/
+│   ├── golden_dataset.json
+│   ├── evaluator.py
+│   └── reports/
+│
+├── config.py
 ├── main.py
 │
 ├── requirements.txt
@@ -276,58 +446,53 @@ backend/
 ```bash
 git clone <repository-url>
 
-cd ai-incident-assistant/backend
+cd ai-incident-assistant
 ```
 
 ---
 
-## Create Virtual Environment
+## Backend Setup
+
+```bash
+cd backend
+
+python -m venv venv
+```
 
 ### Windows
 
 ```powershell
-python -m venv venv
-
 venv\Scripts\activate
 ```
 
-### Linux / macOS
+### Linux/macOS
 
 ```bash
-python3 -m venv venv
-
 source venv/bin/activate
 ```
 
----
-
-## Install Dependencies
+Install dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
----
-
-## Configure Environment Variables
-
-Create:
-
-```text
-.env
-```
-
-Example:
+Create `.env`:
 
 ```env
-OPENROUTER_API_KEY=your_openrouter_api_key
+OPENROUTER_API_KEY=your_key
+MODEL=qwen/qwen3-30b-a3b:free
 
-MODEL=openrouter/free
+LANGFUSE_PUBLIC_KEY=
+LANGFUSE_SECRET_KEY=
+LANGFUSE_BASE_URL=https://cloud.langfuse.com
+
+TOOL_MODE=mock
+ENABLE_REAL_K8S=false
+ENABLE_REAL_PROMETHEUS=false
 ```
 
----
-
-## Run Application
+Run backend:
 
 ```bash
 uvicorn app.main:app --reload
@@ -341,24 +506,19 @@ http://127.0.0.1:8000/docs
 
 ---
 
-# Docker Setup
-
-Create:
-
-```text
-backend/.env
-```
-
-Run:
+## Frontend Setup
 
 ```bash
-docker compose up --build
+cd frontend
+
+npm install
+npm run dev
 ```
 
 Open:
 
 ```text
-http://127.0.0.1:8000/docs
+http://localhost:5173
 ```
 
 ---
@@ -405,7 +565,7 @@ http://127.0.0.1:8000/docs
 
 ---
 
-# Production AI Patterns Demonstrated
+# Skills Demonstrated
 
 This project showcases:
 
@@ -415,52 +575,55 @@ This project showcases:
 * Structured Outputs
 * Pydantic Validation
 * LLM Orchestration
-* Fallback Mechanisms
+* AI Observability
+* Evaluation Frameworks
+* CI/CD Quality Gates
+* Full Stack Development
 * Containerized Deployment
 
 ---
 
-# Roadmap
+# Completed Roadmap
 
-## Phase 1 ✅
+## Phase 1 ✅ Backend Agent
 
 * FastAPI Backend
 * Tool Registry
 * Incident Classification
 * Investigation Planning
 * Tool Execution
-* Structured Outputs
 * OpenRouter Integration
-* Docker Support
 
-## Phase 2
+## Phase 2 ✅ Observability
 
-* OpenAI Function Calling
-* LangGraph Workflows
-* Langfuse Tracing
-* OpenTelemetry
+* Langfuse Integration
+* Workflow Tracing
+* Tool Tracing
+* LLM Tracing
 
-## Phase 3
-
-* Evaluation Harness
-* Golden Datasets
-* LLM-as-Judge
-
-## Phase 4
+## Phase 3 ✅ Frontend Dashboard
 
 * React Dashboard
-* Kubernetes Deployment
-* AWS Bedrock Integration
+* Material UI
+* Incident Visualization
+* Investigation Timeline
 
----
+## Phase 4 ✅ Evaluation & Quality
 
-# Portfolio Value
+* Golden Dataset
+* Evaluation Harness
+* Evaluation Reports
+* GitHub Actions Automation
+* Quality Gates
 
-This project demonstrates practical skills relevant to:
+## Phase 5 🚧 Future Enhancements
 
-* Forward Deployed Engineer
-* AI Engineer
-* Platform Engineer
-* Solutions Architect
+* Kubernetes Integration
+* Prometheus Integration
+* Grafana Deep Links
+* Incident Chat Assistant
+* Authentication
+* Incident History
 
-by combining AI systems, backend engineering, observability concepts, and production deployment patterns into a realistic incident-response workflow.
+```
+```
