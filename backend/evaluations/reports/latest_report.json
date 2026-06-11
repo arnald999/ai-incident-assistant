@@ -1,13 +1,13 @@
 {
   "total_cases": 4,
-  "passed": 3,
-  "failed": 1,
-  "accuracy": 75.0,
+  "passed": 4,
+  "failed": 0,
+  "accuracy": 100.0,
   "results": [
     {
       "name": "latency_regression_after_deployment",
       "passed": true,
-      "latency_ms": 9407.2,
+      "latency_ms": 27054.03,
       "severity_match": true,
       "tools_match": true,
       "keyword_match": true,
@@ -27,12 +27,12 @@
         "latency",
         "deployment"
       ],
-      "actual_root_cause": "The search-service degradation correlates with the recent deployment of version v2.3.1 20 minutes ago, after which P95 latency rose to 2500ms. CPU and memory are not saturated, but the service health is degraded with only 2 of 3 instances healthy and the error rate is elevated at 0.15, indicating the new deployment likely introduced a latency regression or unhealthy instance behavior."
+      "actual_root_cause": "Likely performance regression introduced by recent search-service deployment v2.3.1, deployed 20 minutes before the latency alert. The deployment correlates with P95 latency increasing to 2500 ms, elevated error rate of 0.15, and service health showing only 2 of 3 instances healthy."
     },
     {
       "name": "payment_service_startup_failure",
       "passed": true,
-      "latency_ms": 5828.91,
+      "latency_ms": 6509.18,
       "severity_match": true,
       "tools_match": true,
       "keyword_match": true,
@@ -52,12 +52,12 @@
         "database",
         "credentials"
       ],
-      "actual_root_cause": "payment-service pods are CrashLoopBackOff because the application fails to start due to invalid database credentials, likely caused by a recent secret rotation or stale Kubernetes secret."
+      "actual_root_cause": "payment-service pods are failing to start because the application is using invalid database credentials, likely due to a recent secret rotation issue."
     },
     {
       "name": "cpu_spike",
       "passed": true,
-      "latency_ms": 8451.79,
+      "latency_ms": 5640.85,
       "severity_match": true,
       "tools_match": true,
       "keyword_match": true,
@@ -75,16 +75,16 @@
         "deployment",
         "cpu"
       ],
-      "actual_root_cause": "Recent deployment v2.3.1, deployed 20 minutes ago, likely introduced a CPU-intensive regression in analytics-service. The alert showed CPU above 90% for 15 minutes, and although current CPU has recovered to 45%, elevated p95 latency of 2500 ms and error rate of 0.15 indicate ongoing service degradation."
+      "actual_root_cause": "High CPU usage on analytics-service is likely caused by recent production deployment v2.3.1, which occurred 20 minutes ago and closely correlates with CPU exceeding 90% for 15 minutes."
     },
     {
       "name": "memory_pressure",
-      "passed": false,
-      "latency_ms": 6344.23,
-      "severity_match": false,
+      "passed": true,
+      "latency_ms": 10407.97,
+      "severity_match": true,
       "tools_match": true,
       "keyword_match": true,
-      "expected_severity": "critical",
+      "expected_severity": "high",
       "actual_severity": "high",
       "expected_tools": [
         "get_service_metrics",
@@ -95,10 +95,10 @@
         "get_pod_logs"
       ],
       "expected_keywords": [
-        "database",
-        "credentials"
+        "memory",
+        "OOM"
       ],
-      "actual_root_cause": "inventory-service is failing to start because the configured database credentials are invalid. The MemoryPressure alert appears inconsistent with current metrics and may be stale or secondary to repeated failed starts/restarts."
+      "actual_root_cause": "inventory-service is experiencing Java heap space exhaustion, causing containers to be OOMKilled and driving memory utilization to 94%."
     }
   ]
 }

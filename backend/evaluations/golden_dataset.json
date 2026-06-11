@@ -62,23 +62,23 @@
     }
   },
   {
-    "name": "memory_pressure",
-    "alert": {
-      "service_name": "inventory-service",
-      "alert_type": "MemoryPressure",
-      "message": "Memory utilization exceeded 90%",
-      "environment": "production"
-    },
-    "expected": {
-      "severity": "critical",
-      "required_tools": [
-        "get_service_metrics",
-        "get_pod_logs"
-      ],
-      "root_cause_keywords": [
-        "database",
-        "credentials"
-      ]
-    }
+  "name": "memory_pressure",
+  "alert": {
+    "service_name": "inventory-service",
+    "alert_type": "MemoryPressure",
+    "message": "Memory utilization exceeded 90%",
+    "environment": "production"
+  },
+  "expected": {
+    "severity": "high",
+    "required_tools": [
+      "get_service_metrics",
+      "get_pod_logs"
+    ],
+    "root_cause_keywords": [
+      "memory",
+      "OOM"
+    ]
   }
+}
 ]
