@@ -7,7 +7,7 @@
     {
       "name": "latency_regression_after_deployment",
       "passed": true,
-      "latency_ms": 27054.03,
+      "latency_ms": 12585.37,
       "severity_match": true,
       "tools_match": true,
       "keyword_match": true,
@@ -27,12 +27,12 @@
         "latency",
         "deployment"
       ],
-      "actual_root_cause": "Likely performance regression introduced by recent search-service deployment v2.3.1, deployed 20 minutes before the latency alert. The deployment correlates with P95 latency increasing to 2500 ms, elevated error rate of 0.15, and service health showing only 2 of 3 instances healthy."
+      "actual_root_cause": "Recent deployment of search-service version v2.3.1, 20 minutes before the latency alert, is the most likely cause of service degradation. The service is degraded with only 2 of 3 healthy instances, and metrics show P95 latency increased to 2500ms with a 15% error rate while CPU and memory remain moderate, indicating the issue is likely application-level or instance-health related rather than resource saturation."
     },
     {
       "name": "payment_service_startup_failure",
       "passed": true,
-      "latency_ms": 6509.18,
+      "latency_ms": 12231.35,
       "severity_match": true,
       "tools_match": true,
       "keyword_match": true,
@@ -52,12 +52,12 @@
         "database",
         "credentials"
       ],
-      "actual_root_cause": "payment-service pods are failing to start because the application is using invalid database credentials, likely due to a recent secret rotation issue."
+      "actual_root_cause": "payment-service pods fail to start because invalid database credentials are configured, likely due to a Kubernetes secret rotation issue."
     },
     {
       "name": "cpu_spike",
       "passed": true,
-      "latency_ms": 5640.85,
+      "latency_ms": 5282.77,
       "severity_match": true,
       "tools_match": true,
       "keyword_match": true,
@@ -75,12 +75,12 @@
         "deployment",
         "cpu"
       ],
-      "actual_root_cause": "High CPU usage on analytics-service is likely caused by recent production deployment v2.3.1, which occurred 20 minutes ago and closely correlates with CPU exceeding 90% for 15 minutes."
+      "actual_root_cause": "High CPU usage on analytics-service is likely caused by recent deployment v2.3.1, which was deployed 20 minutes ago shortly before the alert. Metrics confirm sustained CPU at 92%, with elevated p95 latency of 320 ms, while memory usage remains normal at 58% and error rate is low at 4%."
     },
     {
       "name": "memory_pressure",
       "passed": true,
-      "latency_ms": 10407.97,
+      "latency_ms": 8075.89,
       "severity_match": true,
       "tools_match": true,
       "keyword_match": true,
@@ -98,7 +98,7 @@
         "memory",
         "OOM"
       ],
-      "actual_root_cause": "inventory-service is experiencing Java heap space exhaustion, causing containers to be OOMKilled and driving memory utilization to 94%."
+      "actual_root_cause": "inventory-service is experiencing JVM heap exhaustion, causing containers to be OOMKilled and driving memory utilization above 90%."
     }
   ]
 }

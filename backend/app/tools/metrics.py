@@ -1,4 +1,7 @@
-async def get_service_metrics(service_name: str) -> dict:
+from app.config import settings
+
+
+async def mock_service_metrics(service_name: str) -> dict:
     if service_name == "search-service":
         return {
             "service": service_name,
@@ -33,3 +36,12 @@ async def get_service_metrics(service_name: str) -> dict:
         "memory_percent": 55,
         "error_rate": 0.01,
     }
+
+
+async def get_service_metrics(service_name: str) -> dict:
+    if settings.TOOL_MODE == "real":
+        raise NotImplementedError(
+            "Real Prometheus integration not implemented yet"
+        )
+
+    return await mock_service_metrics(service_name)
