@@ -1,0 +1,72 @@
+[
+  {
+    "name": "latency_regression_after_deployment",
+    "alert": {
+      "service_name": "search-service",
+      "alert_type": "ServiceDegradation",
+      "message": "P95 latency increased from 150ms to 2.5s",
+      "environment": "production"
+    },
+    "expected": {
+      "severity": "high",
+      "required_tools": [
+        "get_service_metrics",
+        "get_recent_deployments",
+        "get_service_health"
+      ],
+      "root_cause_keywords": ["latency", "deployment"]
+    }
+  },
+  {
+    "name": "payment_service_startup_failure",
+    "alert": {
+      "service_name": "payment-service",
+      "alert_type": "CrashLoopBackOff",
+      "message": "Pod CrashLoopBackOff in payment-service",
+      "environment": "production"
+    },
+    "expected": {
+      "severity": "critical",
+      "required_tools": [
+        "get_pod_logs",
+        "get_deployment_status",
+        "get_recent_incidents"
+      ],
+      "root_cause_keywords": ["database", "credentials"]
+    }
+  },
+  {
+    "name": "cpu_spike",
+    "alert": {
+      "service_name": "analytics-service",
+      "alert_type": "HighCPUUsage",
+      "message": "CPU usage exceeded 90% for 15 minutes",
+      "environment": "production"
+    },
+    "expected": {
+      "severity": "medium",
+      "required_tools": [
+        "get_service_metrics",
+        "get_recent_deployments"
+      ],
+      "root_cause_keywords": ["evidence"]
+    }
+  },
+  {
+    "name": "memory_pressure",
+    "alert": {
+      "service_name": "inventory-service",
+      "alert_type": "MemoryPressure",
+      "message": "Memory utilization exceeded 90%",
+      "environment": "production"
+    },
+    "expected": {
+      "severity": "medium",
+      "required_tools": [
+        "get_service_metrics",
+        "get_pod_logs"
+      ],
+      "root_cause_keywords": ["evidence"]
+    }
+  }
+]
