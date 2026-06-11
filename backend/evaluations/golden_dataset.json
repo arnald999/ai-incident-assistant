@@ -14,7 +14,10 @@
         "get_recent_deployments",
         "get_service_health"
       ],
-      "root_cause_keywords": ["latency", "deployment"]
+      "root_cause_keywords": [
+        "latency",
+        "deployment"
+      ]
     }
   },
   {
@@ -32,7 +35,10 @@
         "get_deployment_status",
         "get_recent_incidents"
       ],
-      "root_cause_keywords": ["database", "credentials"]
+      "root_cause_keywords": [
+        "database",
+        "credentials"
+      ]
     }
   },
   {
@@ -44,12 +50,15 @@
       "environment": "production"
     },
     "expected": {
-      "severity": "medium",
+      "severity": "high",
       "required_tools": [
         "get_service_metrics",
         "get_recent_deployments"
       ],
-      "root_cause_keywords": ["evidence"]
+      "root_cause_keywords": [
+        "deployment",
+        "cpu"
+      ]
     }
   },
   {
@@ -61,12 +70,15 @@
       "environment": "production"
     },
     "expected": {
-      "severity": "medium",
+      "severity": "critical",
       "required_tools": [
         "get_service_metrics",
         "get_pod_logs"
       ],
-      "root_cause_keywords": ["evidence"]
+      "root_cause_keywords": [
+        "database",
+        "credentials"
+      ]
     }
   }
 ]
