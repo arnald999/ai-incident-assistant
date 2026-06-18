@@ -149,6 +149,289 @@ This prevents unnecessary tool execution and reduces context size.
 
 ---
 
+# 5A. How does the agent decide which tools to execute?
+
+### Answer
+
+The tool selection process is deterministic and happens in two stages:
+
+```text
+Incoming Alert
+        ↓
+Incident Classification
+        ↓
+Investigation Plan Selection
+        ↓
+Tool Execution
+```
+
+Example:
+
+Input:
+
+```json
+{
+  "service_name": "search-service",
+  "alert_type": "ServiceDegradation",
+  "message": "P95 latency increased from 150ms to 2.5s"
+}
+```
+
+Classification:
+
+```text
+latency
+```
+
+Investigation plan:
+
+```python
+[
+    "get_service_metrics",
+    "get_recent_deployments",
+    "get_service_health"
+]
+```
+
+The selected tools are then executed through the Tool Registry.
+
+This design ensures:
+
+* Consistent investigations
+* Predictable behavior
+* Lower token usage
+* Reduced hallucinations
+
+---
+
+# 5B. Why not let the LLM choose the tools dynamically?
+
+### Answer
+
+I intentionally chose deterministic tool planning instead of LLM-driven tool selection.
+
+Current architecture:
+
+```text
+Classification
+        ↓
+Predefined Tool Plan
+        ↓
+Tool Execution
+```
+
+Instead of:
+
+```text
+Alert
+        ↓
+LLM decides tools
+        ↓
+Tool Execution
+```
+
+Reasons:
+
+1. More predictable
+2. Easier debugging
+3. Easier evaluation
+4. Lower latency
+5. Lower cost
+
+For a small set of incident types, deterministic routing is sufficient.
+
+If the number of tools grows significantly, I would consider:
+
+* OpenAI Function Calling
+* OpenAI Agents SDK
+* LangGraph
+* Google ADK
+
+for dynamic tool selection.
+
+---
+
+# 5C. How is the input to each tool determined?
+
+### Answer
+
+The input comes directly from the incoming alert payload.
+
+Example alert:
+
+```json
+{
+  "service_name": "search-service",
+  "alert_type": "ServiceDegradation",
+  "environment": "production"
+}
+```
+
+Tool invocation:
+
+```python
+get_service_metrics(
+    service_name="search-service"
+)
+
+get_service_health(
+    service_name="search-service"
+)
+
+get_recent_deployments(
+    service_name="search-service"
+)
+```
+
+The agent extracts relevant fields and passes them to the selected tools.
+
+Flow:
+
+```text
+Alert
+ ↓
+Extract Service Name
+ ↓
+Tool Parameters
+ ↓
+Tool Execution
+```
+
+---
+
+# 5D. How does the Tool Registry work?
+
+### Answer
+
+The Tool Registry acts as a lookup table between tool names and implementations.
+
+Example:
+
+```python
+TOOL_REGISTRY = {
+    "get_service_metrics": get_service_metrics,
+    "get_service_health": get_service_health,
+    "get_recent_deployments": get_recent_deployments,
+}
+```
+
+The planner returns tool names:
+
+```python
+[
+    "get_service_metrics",
+    "get_recent_deployments",
+]
+```
+
+The executor resolves them through the registry:
+
+```python
+tool_fn = TOOL_REGISTRY[tool_name]
+result = await tool_fn(service_name)
+```
+
+Benefits:
+
+* Decouples planning from execution
+* Makes tools easy to add
+* Keeps agent logic clean
+* Enables future plugin architectures
+
+---
+
+# 5E. What happens if a tool fails?
+
+### Answer
+
+Currently the system captures tool failures and continues the investigation whenever possible.
+
+Example:
+
+```text
+get_service_metrics
+        ↓
+Timeout
+```
+
+Recorded as:
+
+```python
+{
+    "error": "metrics unavailable"
+}
+```
+
+The remaining tools still execute.
+
+This prevents a single dependency from blocking the entire investigation.
+
+Future improvements:
+
+* Retry policies
+* Circuit breakers
+* Partial-failure handling
+* Confidence score adjustments
+
+---
+
+# 5F. How would tool selection evolve in a production system?
+
+### Answer
+
+Current approach:
+
+```text
+Incident Type
+        ↓
+Static Tool Plan
+```
+
+Production approach:
+
+```text
+Alert
+ ↓
+Planner Agent
+ ↓
+Dynamic Tool Selection
+ ↓
+Tool Execution
+ ↓
+Reflection
+ ↓
+Additional Tools
+```
+
+Example:
+
+```text
+Latency Alert
+ ↓
+Metrics Tool
+ ↓
+Detect Deployment Correlation
+ ↓
+Deployment Tool
+ ↓
+Detect DB Latency
+ ↓
+Database Tool
+```
+
+This becomes an iterative investigation process rather than a fixed workflow.
+
+For that level of complexity, I would likely introduce:
+
+* OpenAI Agents SDK
+* LangGraph
+* Google ADK
+* Multi-agent workflows
+
+```
+```
+
+
 # 6. Why execute tools before calling the LLM?
 
 ### Answer
