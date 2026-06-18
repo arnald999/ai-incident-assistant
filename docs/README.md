@@ -781,3 +781,412 @@ The architecture intentionally allows these to be added incrementally.
 8. Deployment-ready configuration
 
 These decisions make the system production-oriented rather than a simple LLM demo.
+
+
+# 23. Why did you choose static tool routing instead of dynamic tool selection?
+
+### Answer
+
+I intentionally chose static tool routing because the problem space is currently small and well-defined.
+
+Current flow:
+
+```text
+Alert
+ ↓
+Classification
+ ↓
+Predefined Investigation Plan
+ ↓
+Tool Execution
+```
+
+Example:
+
+```text
+Latency Incident
+ ↓
+get_service_metrics
+get_recent_deployments
+get_service_health
+```
+
+instead of:
+
+```text
+Alert
+ ↓
+LLM decides tools
+ ↓
+Tool Execution
+```
+
+### Benefits
+
+#### Predictability
+
+The same incident type always follows the same investigation workflow.
+
+Example:
+
+```text
+Latency
+ ↓
+Always Metrics + Deployments + Health
+```
+
+This makes behavior easier to reason about.
+
+#### Easier Debugging
+
+If the agent selects an incorrect tool, I immediately know where the problem exists:
+
+```text
+Classification
+or
+Tool Plan Mapping
+```
+
+instead of investigating LLM reasoning.
+
+#### Easier Evaluation
+
+The evaluation harness can validate:
+
+```text
+Expected Tools
+vs
+Actual Tools
+```
+
+which would be much harder with dynamic planning.
+
+#### Lower Cost
+
+No additional LLM call is required for tool planning.
+
+#### Lower Latency
+
+Tool selection is a simple lookup operation.
+
+---
+
+### When would I move to dynamic routing?
+
+If the system grows to:
+
+```text
+50+ Tools
+Multiple Infrastructure Sources
+Cross-System Investigations
+```
+
+I would introduce:
+
+* OpenAI Function Calling
+* OpenAI Agents SDK
+* LangGraph
+* Google ADK
+
+for dynamic planning.
+
+---
+
+# 24. How are tool parameters passed?
+
+### Answer
+
+Tool parameters are derived directly from the incoming alert.
+
+Incoming alert:
+
+```json
+{
+  "service_name": "search-service",
+  "alert_type": "ServiceDegradation",
+  "environment": "production"
+}
+```
+
+Agent:
+
+```python
+service_name = alert["service_name"]
+```
+
+Tool invocation:
+
+```python
+get_service_metrics(service_name)
+
+get_service_health(service_name)
+
+get_recent_deployments(service_name)
+```
+
+Flow:
+
+```text
+Alert
+ ↓
+Parameter Extraction
+ ↓
+Tool Invocation
+ ↓
+Tool Result
+```
+
+This keeps tool interfaces simple and consistent.
+
+---
+
+# 25. How would you scale this to 50+ tools?
+
+### Answer
+
+The current approach works well because the system contains a small number of tools.
+
+Current:
+
+```text
+4 Incident Types
+6 Tools
+```
+
+Future:
+
+```text
+50+ Tools
+Multiple Systems
+```
+
+Examples:
+
+```text
+Kubernetes
+Prometheus
+Grafana
+PagerDuty
+Jira
+ServiceNow
+AWS
+Datadog
+ArgoCD
+```
+
+At that scale I would introduce:
+
+### Planner Agent
+
+Instead of:
+
+```python
+if incident_type == "latency":
+```
+
+I would use:
+
+```text
+Planner Agent
+ ↓
+Tool Selection
+ ↓
+Execution
+```
+
+### Tool Metadata
+
+Each tool would declare:
+
+```python
+{
+    "name": "get_service_metrics",
+    "description": "...",
+    "required_inputs": [
+        "service_name"
+    ]
+}
+```
+
+### Function Calling
+
+The LLM would select tools based on metadata.
+
+Example:
+
+```text
+Latency Alert
+ ↓
+Planner
+ ↓
+Metrics Tool
+ ↓
+Deployment Tool
+ ↓
+Database Tool
+```
+
+### Reflection Loop
+
+The agent could execute additional tools if the first investigation does not provide sufficient evidence.
+
+---
+
+# 26. What happens when a tool fails?
+
+### Answer
+
+The system is designed to tolerate partial failures.
+
+Example:
+
+```text
+get_service_metrics()
+ ↓
+Timeout
+```
+
+Instead of failing the entire investigation:
+
+```text
+Metrics Tool Failed
+ ↓
+Continue Investigation
+ ↓
+Run Remaining Tools
+```
+
+Tool result:
+
+```json
+{
+  "error": "metrics unavailable"
+}
+```
+
+The LLM still receives:
+
+```text
+Logs
+Deployments
+Health
+```
+
+and can continue reasoning.
+
+### Why?
+
+Production systems frequently experience:
+
+* API timeouts
+* Rate limits
+* Service outages
+* Authentication failures
+
+A single dependency should not prevent investigation.
+
+### Future Improvements
+
+* Retries
+* Circuit Breakers
+* Fallback Tools
+* Confidence Score Reduction
+* Error Categorization
+
+---
+
+# 27. Why not use OpenAI Function Calling?
+
+### Answer
+
+Function Calling is powerful but introduces additional complexity that was not necessary for the first version.
+
+Current workflow:
+
+```text
+Classification
+ ↓
+Tool Plan
+ ↓
+Execution
+ ↓
+LLM Analysis
+```
+
+Function Calling workflow:
+
+```text
+LLM
+ ↓
+Tool Selection
+ ↓
+Tool Execution
+ ↓
+LLM
+ ↓
+Tool Selection
+ ↓
+...
+```
+
+### Why I chose not to use it initially
+
+#### Simpler Architecture
+
+The current workflow is easy to understand and debug.
+
+#### Better Determinism
+
+The same alert always follows the same investigation path.
+
+#### Easier Evaluation
+
+Tool selection can be validated directly.
+
+#### Faster Execution
+
+No additional planning LLM call.
+
+#### Lower Cost
+
+Fewer model invocations.
+
+---
+
+### When would Function Calling make sense?
+
+When:
+
+```text
+Many Tools
+Unknown Investigation Paths
+Dynamic Discovery
+Multi-step Reasoning
+```
+
+Example:
+
+```text
+Latency Alert
+ ↓
+Metrics Tool
+ ↓
+Database Tool
+ ↓
+Kubernetes Tool
+ ↓
+Grafana Tool
+```
+
+The exact path is not known in advance.
+
+At that point I would likely introduce:
+
+* OpenAI Function Calling
+* OpenAI Agents SDK
+* LangGraph
+* Google ADK
+
+to enable dynamic investigations.
+
+For the current scope, deterministic planning provided a better balance of simplicity, explainability, and reliability.
